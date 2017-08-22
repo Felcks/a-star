@@ -1,155 +1,67 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include "Lista.h"
 
-struct node{
-	int x;
-	int y;
-	int dist;
-	int current_cost;
-	struct node* discovered_by;
-};
-typedef struct node Node;
+int main(void){
 
-struct node* cria_node(int x, int y, struct node final, int current_cost, struct node* discovered_by){
+	Lista* openList = cria_lista();
+	Lista* closedList = cria_lista();
+	Tabuleiro* tabuleiro = cria_tabuleiro(6, 6); //depois passar o tabuleiro
 
-	struct node* node;
-	node = (struct node*)malloc(sizeof(struct node));
-	node->x = x;
-	node->y = y;
-	node->current_cost = current_cost;
-	node->discovered_by = discovered_by;
+	Node* final = cria_node_final(4, 5);
+	Node* start = cria_node(1, 2, *final, 0, tabuleiro);
 
-	int distX = abs(final.x - x);
-	int distY = abs(final.y - y);
-	node->dist = distX + distY;
+	insere_lista_final_start(closedList, *start);
 
-	return node;
-}
-
-int distance(Node node, Node target){
-
-	return abs(target.x - node.x) + abs(target.y - node.y);
-}
-
-
-int main(void) {
-		
-	Node openList[100];
-	int open_count = 0;
-
-	Node closedList[100];
-	int closed_count = 0;
-
-
-
-	int dimX = 5;
-	int dimY = 5;
-	int tabuleiro[dimX][dimY];
 	
-	int row = 0;
-	int column = 0;
+	Elem* el = *closedList;
+	while(el != NULL){
 
-	for(row = 0; row < dimY; row++){
-		for(column = 0; column < dimX; column++){
-			tabuleiro[row][column] = 0;
-		}
-	}
+		//variação de zero a 1 - talvez utilizar uma função sen?
+		//Agora tenho que pegar os vizinhos e adicionar na open list
+		int possiblesX[3] = { el->dados.x - 1, el->dados.x, el->dados.x + 1};
+		int possiblesY[3] = { el->dados.y - 1, el->dados.y, el->dados.y + 1};
+		int costs[9] = { 14, 10, 14, 10, 0, 10, 14, 10, 14 };
+		
+		int i = 0, j = 0;
+		for(i = 0; i < 3; i++){
+			for(j = 0; j < 3; j++){
 
-	for(row = 0; row < dimY; row++){
-		for(column = 0; column < dimX; column++){
-			printf("%i ", tabuleiro[row][column]);
-		}
-		printf("\n");
-	}
+				Node* node = cria_node(possiblesX[i], possiblesY[j], *final,
+									   el->dados.mov_cost + costs[i * 3 + j] , tabuleiro);
 
-	struct node empty;
-	struct node* final = cria_node(4, 4, empty, 0, NULL);
-	struct node* start = cria_node(0, 0, *final, 0, NULL);
-
-
-	closedList[closed_count] = *start;
-	closed_count++;
-	while(distance(closedList[closed_count - 1], *final) > 1){
-
-		Node node = closedList[closed_count - 1];
-
-		for(row = 0; row < dimY; row++){
-			for(column = 0; column < dimX; column++){
-
-				if(abs(row - node.x) + abs(column - node.y) == 1){
-					struct node* no = cria_node(row, column, *final, node.current_cost + 10, &node);
-
-					int i = 0;
-					for(i = 0; i < open_count; i++){
-						if(openList[i].x == row && openList[i].y == column){
-							//vou adicionar o melhor
-							if(openList[i].current_cost + openList[i].dist < no->dist + no->current_cost)
-								continue;
-							else{
-								openList[i] = *no;
-							}
-						}
+				if(node != NULL){
+					//verificar se ja existe na closed list ou na open
+					if(!existe_na_lista(openList, node->x, node->y) &&
+					   !existe_na_lista(closedList, node->x, node->y)){
+							insere_lista_final(openList, *node, el);
 					}
-
-					openList[open_count] = *no;
-					open_count++;
-
-					//printf("ROW %i COLUMN %i DIST %i \n", row, column, no->dist + no->current_cost);
-				}
-				else if(abs(row - node.x) == 1 &&  abs(column - node.y) == 1){
-					struct node* no = cria_node(row, column, *final, node.current_cost + 14, &node);
-
-					int i = 0;
-					for(i = 0; i < open_count; i++){
-						if(openList[i].x == row && openList[i].y == column){
-							//vou adicionar o melhor
-							if(openList[i].current_cost + openList[i].dist < no->dist + no->current_cost)
-								continue;
-							else{
-								openList[i] = *no;
-							}
-						}
-					}
-
-					openList[open_count] = *no;
-					open_count++;
-
-					//printf("ROW %i COLUMN %i DIST %i \n", row, column, no->dist + no->current_cost);
 				}
 			}
 		}
 
-		int i = 0;
-		int melhor = 0;
-		int menorCusto = openList[i].dist + openList[i].current_cost;
 
-		for(i = 1; i < open_count; i++){
+			printa_lista(openList);
 
-			if(openList[i].dist + node.current_cost < menorCusto){
-				melhor = i;
-				menorCusto = openList[i].dist + openList[i].current_cost;
-			}
-		}
+		Elem* element = pega_menor_custo(openList);
+		insere_lista_final(closedList, element->dados, element->discovered_by);
+		remove_lista(openList, element->dados.x, element->dados.y);
+		el = element;
+		printf("Elemento x:%i y:%i\n", el->dados.x, el->dados.y );
 
-		closedList[closed_count] = openList[melhor];
-		closed_count++;
-
-		printf("%i %i\n", openList[melhor].x, openList[melhor].y);
-
-		openList[melhor] = openList[open_count - 1];
-		open_count--;
-
-
-		Node last = closedList[closed_count - 1];
-		if(distance(last, *final) == 1){
-			printf("distancia e 1\n");
+		if(el->dados.dist == 1){
+			printf("Achou!!!\n");
 			break;
 		}
 
-	
 	}
 
+	printf("Caminho ao contrario agora!\n");
+	while(el != NULL){
+		printf("x: %i y:%i\n", el->dados.x, el->dados.y);
+		el = el->discovered_by;	
+	}
 
 	return 0;
 }
